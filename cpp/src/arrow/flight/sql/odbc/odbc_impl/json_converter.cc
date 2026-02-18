@@ -19,15 +19,12 @@
 
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/writer.h>
-#include <boost/beast/core/detail/base64.hpp>
 #include "arrow/builder.h"
 #include "arrow/flight/sql/odbc/odbc_impl/util.h"
 #include "arrow/scalar.h"
+#include "arrow/util/base64.h"
 #include "arrow/visitor.h"
 
-using boost::beast::detail::base64::encode;
-using boost::beast::detail::base64::encoded_size;
-namespace base64 = boost::beast::detail::base64;
 
 namespace arrow::flight::sql::odbc {
 
@@ -47,10 +44,8 @@ template <typename BinaryScalarT>
 Status ConvertBinaryToBase64StringAndWrite(
     const BinaryScalarT& scalar, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
   const auto& view = scalar.view();
-  size_t encoded_size = base64::encoded_size(view.length());
-  std::vector<char> encoded(std::max(encoded_size, static_cast<size_t>(1)));
-  base64::encode(&encoded[0], view.data(), view.length());
-  writer.String(&encoded[0], encoded_size, true);
+  std::string encoded = arrow::util::base64_encode(view);
+  writer.String(encoded.data(), static_cast<rapidjson::SizeType>(encoded.length()), true);
   return Status::OK();
 }
 

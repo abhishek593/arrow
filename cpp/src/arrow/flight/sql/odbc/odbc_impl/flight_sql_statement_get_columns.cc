@@ -88,10 +88,10 @@ Result<std::shared_ptr<RecordBatch>> TransformInner(
 
   GetTablesReader reader(original);
 
-  optional<boost::xpressive::sregex> column_name_regex =
+  std::optional<std::shared_ptr<re2::RE2>> column_name_regex =
       column_name_pattern
-          ? make_optional(util::ConvertSqlPatternToRegex(*column_name_pattern))
-          : nullopt;
+          ? std::make_optional(util::ConvertSqlPatternToRegex(*column_name_pattern))
+          : std::nullopt;
 
   while (reader.Next()) {
     const auto& table_catalog = reader.GetCatalogName();
@@ -109,7 +109,7 @@ Result<std::shared_ptr<RecordBatch>> TransformInner(
       const std::shared_ptr<Field>& field = schema->field(i);
 
       if (column_name_regex &&
-          !boost::xpressive::regex_match(field->name(), *column_name_regex)) {
+          !re2::RE2::FullMatch(field->name(), **column_name_regex)) {
         continue;
       }
 

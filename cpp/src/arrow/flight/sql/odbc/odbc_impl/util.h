@@ -24,7 +24,7 @@
 #include "arrow/flight/sql/odbc/odbc_impl/types.h"
 #include "arrow/flight/types.h"
 
-#include <boost/xpressive/xpressive.hpp>
+#include <re2/re2.h>
 #include <codecvt>
 #include <functional>
 #include <optional>
@@ -112,7 +112,7 @@ std::optional<int32_t> GetDisplaySize(SqlDataType data_type,
 
 std::string ConvertSqlPatternToRegexString(const std::string& pattern);
 
-boost::xpressive::sregex ConvertSqlPatternToRegex(const std::string& pattern);
+std::shared_ptr<re2::RE2> ConvertSqlPatternToRegex(const std::string& pattern);
 
 bool NeedArrayConversion(Type::type original_type_id, CDataType data_type);
 

@@ -34,7 +34,7 @@
 #include <sql.h>
 #include <sqlext.h>
 #include <boost/algorithm/string.hpp>
-#include <boost/xpressive/xpressive.hpp>
+#include <re2/re2.h>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -54,8 +54,7 @@ namespace {
 // Note that the value can be wrapped in curly braces to escape other significant
 // characters such as semi-colons and equals signs. NOTE: This can be optimized to be
 // built statically.
-const boost::xpressive::sregex CONNECTION_STR_REGEX(
-    boost::xpressive::sregex::compile("([^=;]+)=({.+}|[^;]+|[^;])"));
+const re2::RE2 CONNECTION_STR_REGEX("([^=;]+)=({.+}|[^;]+|[^;])");
 }  // namespace
 
 // Public
@@ -680,15 +679,14 @@ void ODBCConnection::DropDescriptor(ODBCDescriptor* desc) {
 // Public Static
 // ===================================================================================
 std::optional<std::string> ODBCConnection::GetDsnIfExists(const std::string& conn_str) {
-  const int groups[] = {1, 2};  // CONNECTION_STR_REGEX has two groups. key: 1, value: 2
-  boost::xpressive::sregex_token_iterator regex_iter(conn_str.begin(), conn_str.end(),
-                                                     CONNECTION_STR_REGEX, groups),
-      end;
+  re2::StringPiece input(conn_str);
+  std::string key;
+  std::string value;
 
   // First key in connection string should be either dsn or driver
-  auto it = regex_iter;
-  std::string key = *regex_iter;
-  std::string value = *++regex_iter;
+  if (!re2::RE2::FindAndConsume(&input, CONNECTION_STR_REGEX, &key, &value)) {
+    return std::nullopt;
+  }
 
   // Strip wrapping curly braces.
   if (value.size() >= 2 && value[0] == '{' && value[value.size() - 1] == '}') {
@@ -707,14 +705,11 @@ std::optional<std::string> ODBCConnection::GetDsnIfExists(const std::string& con
 
 void ODBCConnection::GetPropertiesFromConnString(
     const std::string& conn_str, Connection::ConnPropertyMap& properties) {
-  const int groups[] = {1, 2};  // CONNECTION_STR_REGEX has two groups. key: 1, value: 2
-  boost::xpressive::sregex_token_iterator regex_iter(conn_str.begin(), conn_str.end(),
-                                                     CONNECTION_STR_REGEX, groups),
-      end;
+  re2::StringPiece input(conn_str);
+  std::string key;
+  std::string value;
 
-  for (auto it = regex_iter; end != regex_iter; ++regex_iter) {
-    std::string key = *regex_iter;
-    std::string value = *++regex_iter;
+  while (re2::RE2::FindAndConsume(&input, CONNECTION_STR_REGEX, &key, &value)) {
 
     // Strip wrapping curly braces.
     if (value.size() >= 2 && value[0] == '{' && value[value.size() - 1] == '}') {

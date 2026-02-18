@@ -32,6 +32,7 @@
 #include <boost/tokenizer.hpp>
 
 #include <ctime>
+#include <iomanip>
 #include <sstream>
 
 namespace arrow::flight::sql::odbc {
@@ -711,9 +712,9 @@ std::string ConvertSqlPatternToRegexString(const std::string& pattern) {
   return regex_str;
 }
 
-boost::xpressive::sregex ConvertSqlPatternToRegex(const std::string& pattern) {
+std::shared_ptr<re2::RE2> ConvertSqlPatternToRegex(const std::string& pattern) {
   const std::string& regex_str = ConvertSqlPatternToRegexString(pattern);
-  return boost::xpressive::sregex(boost::xpressive::sregex::compile(regex_str));
+  return std::make_shared<re2::RE2>(regex_str);
 }
 
 bool NeedArrayConversion(Type::type original_type_id, CDataType data_type) {
